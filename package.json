@@ -1,0 +1,21 @@
+{
+  "name": "hmsbackend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "joi": "^17.13.3",
+    "koa": "^2.15.3",
+    "koa-body": "^6.0.1",
+    "koa-qs": "^3.0.0",
+    "koa-router": "^13.0.1",
+    "lodash": "^4.17.21",
+    "mongoose": "^8.6.3",
+    "mongoose-bcrypt": "^1.11.0"
+  }
+}

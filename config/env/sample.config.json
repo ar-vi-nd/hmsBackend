@@ -1,0 +1,35 @@
+{
+    "mongo_instances": {
+        "primary_1": {
+            "connect": false,
+			"db": "",
+			"host": "",
+			"user": "",
+			"pass": "",
+			"options": ""
+        }
+    },
+    "redis_instances": {
+        "redis_1": {
+            "connect": false,
+			"host": "",
+			"user": "",
+			"pass": "",
+			"db": "",
+			"timeout": 2000,
+			"port": 6379
+        }
+    },
+    "memcache_instances": {
+        "redis_1": {
+            "connect": false,
+			"host": "",
+			"port": "",
+			"db": "",
+			"timeout": 2000
+        }
+    },
+    "application": {
+        "port": 1111
+    }
+}
