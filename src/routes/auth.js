@@ -15,4 +15,14 @@ r.get("/auth/arvind",async(ctx,next)=>{
     ctx.body = controller.arvind;
 })
 
+r.post("/auth/login",async(ctx,next)=>{
+    let controller = new Controller.Auth(ctx,next)
+    await controller.execute("login")
+})
+
+r.get("/auth/home", async (ctx, next) => {
+    let controller = new Controller.Auth(ctx, next);
+    await controller.execute('home');
+});
+
 module.exports = r;

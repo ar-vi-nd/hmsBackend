@@ -8,11 +8,11 @@ utilities.Registry.set("config", config);
 utilities.Registry.set("env", env);
 
 const schemaList = require("./src/models")
-console.log(schemaList)
+// console.log(schemaList)
 utilities.Registry.set("schemas", schemaList);
-console.log(utilities)
+// console.log(utilities)
 
-console.log(utilities?.Client?.MongoDB?.Client)
+// console.log(utilities?.Client?.MongoDB?.Client)
 
 let mongoConn = new (utilities?.Client?.MongoDB?.Client)(config.mongo_instances.primary_1,{}).connect()
 
@@ -22,13 +22,13 @@ let mongoConn = new (utilities?.Client?.MongoDB?.Client)(config.mongo_instances.
 let models ={}
 // here the first parameter is value and the second one is the key
 _.each(schemaList, (value,key)=>{
-    console.log("this is the key",key)
-    console.log("this is the value",value)
+    // console.log("this is the key",key)
+    // console.log("this is the value",value)
 
     models[key] = mongoConn.model(key,value.schema.schema)
 
 })
-console.log("These are models: ",models)
+// console.log("These are models: ",models)
 utilities.Registry.set("models", models);
 
 

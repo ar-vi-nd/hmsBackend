@@ -1,6 +1,7 @@
 const {Schema} = require('mongoose')
 const constants = require('./constants')
 const address = require('./address')
+const bcryptPlugin = require('mongoose-bcrypt');
 
 let schema = new Schema({
     // _id: Schema.Types.ObjectId,
@@ -41,6 +42,8 @@ let schema = new Schema({
         versionKey: false
     }
 )
+
+schema.plugin(bcryptPlugin)
 
 module.exports = {
     schema

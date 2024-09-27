@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const Utilities = require("../utilities");
+const Promise = require('bluebird')
 
 
 const ERROR_LIST = {
@@ -55,7 +56,8 @@ class Base{
 			return;
 		}
 		await Promise.each(this._beforeMethods[methodName], async(m) => {
-			await this[m]();
+            console.log(this[m])
+			await this[m](this.ctx, this.next); 
 		});
     }
 
