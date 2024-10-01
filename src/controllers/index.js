@@ -1,4 +1,5 @@
 module.exports = {
     Base : require('./base'),
-    Auth : require('./auth')
+    Auth : require('./auth'),
+    Admin : require('./admin')
 }

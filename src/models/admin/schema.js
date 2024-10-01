@@ -1,6 +1,5 @@
 const { Schema } = require("mongoose");
 const constants = require("./constants");
-
 let schema = new Schema({
 	// _id: new Schema.Types.ObjectId,
 	name: {
@@ -25,6 +24,10 @@ let schema = new Schema({
 		required: true,
 		bcrypt: true
 	},
+	isAdmin: {
+        type: Boolean,
+        default: false
+    }
 }, {
 	collection: "admins",
 	timestamps: {

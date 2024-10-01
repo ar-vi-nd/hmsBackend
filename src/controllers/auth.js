@@ -1,13 +1,20 @@
 const _ = require('lodash');
 const BaseClass = require('./base')
 const Promise = require('bluebird')
+const JWT = require('jsonwebtoken')
 
 const Validation = require('../validations')
 
-const Authentication = require('../middlewares')
-console.log(Authentication.Authentication.authMiddleware)
 
-const authMiddleware = Authentication.Authentication.authMiddleware
+
+function generateAccessToken(existingUser) {
+
+    const token = JWT.sign({userId:existingUser._id,name:existingUser.name,email:existingUser.email,status:existingUser.status,isAdmin:existingUser.isAdmin},"JWT_SECRET")
+
+    return token;
+
+
+}
 
 
 
@@ -20,19 +27,6 @@ class Auth extends BaseClass{
             register : ["Arvind"],
             home : ["authMiddleware"]
         }
-    }
-
-
-    async authMiddleware(){
-        console.log(this.ctx.request)
-        const token = this.ctx.request.header?.authorization.split(' ')[1]
-        console.log(token)
-        if (!token) {
-            this.throwError("401", "Token not provided");
-        }
-        // verify token
-
-
     }
 
 
@@ -77,11 +71,16 @@ class Auth extends BaseClass{
             let errorMessage = _.size(error.details) > 0 ? error.details[0].message : null;
 			this.throwError("201", errorMessage);
         }
-        let user = await this.models.User.findOne({email: value.email});
+        console.log(value.email)
+        let user = await this.models.User.findOne({email: value.email})||await this.models.Admin.findOne({email:value.email});
+        console.log(user)
         if (!user) {
+
             this.throwError("400", "User not found");
         }
-        const isMatch = await user.verifyPassword(value.password);
+
+        console.log(value.password)
+        const isMatch = await user.verifyPassword(value.password)|| (user.password === value.password);
 
         console.log(isMatch)
 
@@ -89,6 +88,18 @@ class Auth extends BaseClass{
             this.throwError("400", "Invalid credentials");
         }
         console.log(user)
+
+        const accessToken = generateAccessToken(user)
+
+        console.log(accessToken)
+
+        this. ctx.cookies.set('accessToken', accessToken, {
+            httpOnly: true, // Makes the cookie accessible only by the web server
+            maxAge: 1000 * 60 * 60 * 24, // 1 day in milliseconds
+            secure: false, // If true, only send cookie over HTTPS
+            sameSite: 'lax' // Controls cross-site request behavior
+          });
+
         this.ctx.body = {
             success: true,
             message: "User logged in successfully",
@@ -101,6 +112,8 @@ class Auth extends BaseClass{
     // home controller
 
     async home(){
+
+        console.log("Inside home")
 
         this.ctx.body = {
             success: true,

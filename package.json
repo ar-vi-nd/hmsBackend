@@ -11,6 +11,7 @@
   "dependencies": {
     "bluebird": "^3.7.2",
     "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
     "koa": "^2.15.3",
     "koa-body": "^6.0.1",
     "koa-qs": "^3.0.0",

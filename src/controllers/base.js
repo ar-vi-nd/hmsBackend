@@ -2,6 +2,8 @@ const _ = require('lodash');
 const Utilities = require("../utilities");
 const Promise = require('bluebird')
 
+const JWT = require('jsonwebtoken')
+
 
 const ERROR_LIST = {
 	"101": {statusCode: 400, errorCode: "101", codeMsg: "API_KEY_MISSING", message: "Api Key not found in authentication header or query string"},
@@ -49,6 +51,38 @@ class Base{
         }
         this.error = error
         throw new Error(err.codeMsg)
+    }
+
+
+    async authMiddleware(){
+        // console.log(this.ctx.request)
+        const token = this.ctx.request.header?.authorization?.split(' ')[1]
+        // console.log(token)
+        if (!token) {
+            this.throwError("102", "Token not provided");
+        }
+        // verify token
+
+       try {
+
+        console.log("inside auth middleware just before verifying token")
+         const payload = await JWT.verify(token,"JWT_SECRET")
+         console.log(payload)
+     
+       
+        this.ctx.user = payload
+        // await this.next()
+
+        console.log("After authenticationg")
+
+    } catch (error) {
+        console.log(error)
+        this.throwError("102", "Invalid token");
+       
+      }
+
+
+
     }
 
     async _executeBefore(methodName) {

@@ -44,6 +44,7 @@ app.use(async (ctx, next) => {
 		ctx.set('Access-Control-Allow-Methods', '*');
 		ctx.set('Access-Control-Allow-Headers', '*');
 		await next();
+		console.log("printing something")
 	} catch (error) {
 		console.log('Process.Error', error);
 		ctx.status = error.status || 500;
