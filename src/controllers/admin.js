@@ -29,11 +29,28 @@ class Admin extends BaseClass{
 			this.throwError("201", errorMessage);
 		}
 
-        const addedHotel = await this.models.Hotel.create(value
+        const {name,owner,address,contact,pictures,roomCounts} = value
+        try{
 
-        )
+        const addedHotel = await this.models.Hotel.create(value)
 
         console.log(value)
+
+        const {roomCounts}= value
+
+
+        // let totalRooms = roomCounts.single+roomCounts.double+roomCounts.deluxe
+
+        for(let i=0;i< roomCounts.single;i++){
+            await this.models.Room.create({hotelId:addedHotel._id,roomNumber:10+i,type:"single",price:1000,isBooked: false})
+        }
+        for(let i=0;i< roomCounts.double;i++){
+            await this.models.Room.create({hotelId:addedHotel._id,roomNumber:10+i,type:"double",price:2000,isBooked: false})
+        }
+        for(let i=0;i< roomCounts.deluxe;i++){
+            await this.models.Room.create({hotelId:addedHotel._id,roomNumber:10+i,type:"deluxe",price:3000,isBooked: false})
+        }
+
 
         
 
@@ -44,6 +61,10 @@ class Admin extends BaseClass{
                
             }
         }
+    }
+    catch(error){
+        console.log(error)
+    }
     }
 
     async removeHotel(){

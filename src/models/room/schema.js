@@ -11,8 +11,8 @@ let schema = new Schema({
     roomNumber: {
             type: String,
             required: true,
-            minlength: 5,
-            maxlength: 10
+            minlength: 2,
+            maxlength: 5
     },
     type: {
         type: String,
@@ -23,7 +23,7 @@ let schema = new Schema({
         type: Number,
         required: true
     },
-    booked: {
+    isBooked: {
         type: Boolean,
         default: false
     }

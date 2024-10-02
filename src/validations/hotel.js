@@ -29,7 +29,8 @@ const HotelRegisterSchema = Joi.object({
     pictures: Joi.array().items(Joi.object({
         url: Joi.string().required(),
         description: Joi.string()
-    })).min(3).max(5).required()
+    })).min(3).max(5).required(),
+    roomCounts: Joi.object({single: Joi.number(),double: Joi.number(),deluxe: Joi.number()})
 
 });
 

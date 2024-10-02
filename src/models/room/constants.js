@@ -1,3 +1,3 @@
 module.exports = {
-    type :   {enum: ['single', 'double', 'suite']}
+    type :   {enum: ['single', 'double', 'deluxe']}
 }
