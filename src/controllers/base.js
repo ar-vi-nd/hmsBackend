@@ -50,7 +50,7 @@ class Base{
             error.message = message
         }
         this.error = error
-        throw new Error(err.codeMsg)
+        throw new Error(error.codeMsg)
     }
 
 

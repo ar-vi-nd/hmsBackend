@@ -1,6 +1,8 @@
 const BaseClass = require('./base')
 const _ = require('lodash')
 const Validation = require('../validations')
+const mongoose = require('mongoose');
+
 
 class Admin extends BaseClass{
     constructor(ctx, next) {
@@ -67,25 +69,52 @@ class Admin extends BaseClass{
     }
     }
 
-    async removeHotel(){
-        // remove hotel logic here
+    async removeHotel() {
+        console.log(this.ctx.request?.params);
+    
+        const  hotelId  = this.ctx.request?.params?.id;
 
-        console.log(this.ctx.request?.params)
+        console.log(hotelId)
 
-        this.ctx.body = {
-            success: true,
-            message: "Hotel removed successfully",
-            data: {
-               
-            }
+        if(!mongoose.Types.ObjectId.isValid(hotelId)){
+            this.throwError("201", "Invalid hotel ID")
+        }
+
+        
+    
+        try {
+            // Remove all rooms associated with the hotelId
+            await this.models.Room.deleteMany({ hotelId });
+    
+            // Remove the hotel itself
+            await this.models.Hotel.findByIdAndDelete(hotelId);
+    
+            this.ctx.body = {
+                success: true,
+                message: "Hotel and associated rooms removed successfully",
+                data: {}
+            };
+        } catch (error) {
+            console.log(error);
+            this.ctx.body = {
+                success: false,
+                message: "Error removing hotel",
+                data: { error: error.message }
+            };
         }
     }
+    
 
     async updateHotel(){
         // update hotel logic here
+        
 
         const hotelId = this.ctx.request.params?.id
         console.log(hotelId)
+
+        if(!mongoose.Types.ObjectId.isValid(hotelId)){
+            this.throwError("201", "Invalid hotel ID")
+        }
 
 
         const hotelDetails = await this.models.Hotel.findById(hotelId)
@@ -117,7 +146,23 @@ class Admin extends BaseClass{
     async getHotels(){
         // get hotels logic here
 
-        const hotels = await this.models.Hotel.find({})
+        const { city, zipcode, limit } = this.ctx.query; // Extract query parameters
+
+    // Build query object based on provided parameters
+    let query = {};
+
+    if (city) {
+        query['address.city'] = city; // Filter by city if provided
+    }
+
+    if (zipcode) {
+        query['address.zipcode'] = zipcode; // Filter by zipcode if provided
+    }
+
+    console.log(query)
+
+    // Fetch hotels based on the query, limit the number of results if provided
+    const hotels = await this.models.Hotel.find(query).limit(limit ? parseInt(limit) : 10);
 
         this.ctx.body = {
             success: true,

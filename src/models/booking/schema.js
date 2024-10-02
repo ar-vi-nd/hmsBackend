@@ -27,16 +27,7 @@ const schema = new Schema({
         type: String,
         required: true,
         enum: ['CHECKED_IN', 'CHECKED_OUT', 'CANCELLED']
-    },
-    pictures: [{
-        url: { 
-            type: String, 
-            required: true 
-        },
-        description: { 
-            type: String 
-        }
-    },]
+    }
 },{
     collection: 'bookings',
     timestamps: {
