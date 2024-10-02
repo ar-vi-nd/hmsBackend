@@ -1,3 +1,3 @@
 module.exports = {
-    schema : require('./hotel')
+    schema : require('./schema'),
 }

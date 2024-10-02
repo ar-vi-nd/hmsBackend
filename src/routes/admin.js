@@ -13,7 +13,7 @@ r.get("/admin/hotels",async (ctx, next) => {
     await controller.execute('getHotels');
 })
 
-r.patch("/admin/hotels",async (ctx, next) =>{
+r.patch("/admin/hotels/:id",async (ctx, next) =>{
     let controller = new Controller.Admin(ctx, next);
     await controller.execute('updateHotel');
 })

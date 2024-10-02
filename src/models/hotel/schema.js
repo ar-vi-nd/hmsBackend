@@ -1,5 +1,7 @@
 const {Schema} = require('mongoose')
 
+
+
 let schema = new Schema({
     name : {
         type: String,
@@ -40,7 +42,29 @@ let schema = new Schema({
             minlength: 5,
             maxlength: 100
         }
-    }
+    },
+    pictures:[{
+        url: { 
+            type: String, 
+            required: true 
+        },
+        description: { 
+            type: String 
+        }
+    }],
+    roomCounts: {
+        single: { type: Number, default: 0 }, // Count of single rooms
+        double: { type: Number, default: 0 }, // Count of double rooms
+        deluxe: { type: Number, default: 0 }  // Count of deluxe rooms
+    },
+},{
+	collection: "hotels",
+	timestamps: {
+		createdAt: "created",
+		updatedAt: "modified"
+	},
+	autoCreate: false,
+	versionKey: false
 })
 
 
