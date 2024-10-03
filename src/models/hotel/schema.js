@@ -53,9 +53,9 @@ let schema = new Schema({
         }
     }],
     roomCounts: {
-        single: { type: Number, default: 0 }, // Count of single rooms
-        double: { type: Number, default: 0 }, // Count of double rooms
-        deluxe: { type: Number, default: 0 }  // Count of deluxe rooms
+        single: { price:{type : Number},count:{type:Number,default:0} }, // Count of single rooms
+        double: { price:{type : Number},count:{type:Number,default:0} }, // Count of double rooms
+        deluxe: { price:{type : Number},count:{type:Number,default:0} }  // Count of deluxe rooms
     },
 },{
 	collection: "hotels",

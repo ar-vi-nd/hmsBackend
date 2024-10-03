@@ -22,6 +22,7 @@ const HotelRegisterSchema = Joi.object({
         
         email: Joi.string()
             .email()
+            .lowercase()
             .min(5)
             .max(100)
             .required()
@@ -30,7 +31,7 @@ const HotelRegisterSchema = Joi.object({
         url: Joi.string().required(),
         description: Joi.string()
     })).min(3).max(5).required(),
-    roomCounts: Joi.object({single: Joi.number(),double: Joi.number(),deluxe: Joi.number()})
+    roomCounts: Joi.object({single: Joi.object({price:Joi.number(),count:Joi.number()}),double: Joi.object({price:Joi.number(),count:Joi.number()}),deluxe: Joi.object({price:Joi.number(),count:Joi.number()})})
 
 });
 

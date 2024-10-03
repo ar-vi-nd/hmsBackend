@@ -1,5 +1,4 @@
 const BaseClass = require('./base')
-const _ = require('lodash')
 const Validation = require('../validations')
 const mongoose = require('mongoose');
 
@@ -10,98 +9,105 @@ class Booking extends BaseClass{
         super(ctx,next)
         this._beforeMethods = {
             bookRoom : ['authMiddleware'],
-            cancelBooking : ['authMiddleware']
+            cancelBooking : ['authMiddleware'],
+            getHotel : ['authMiddleware'],
+            getAllBookings : ['authMiddleware'],
+            getBookingDetails : ['authMiddleware']
         }
     }
 
 
-    async showRoomAvailability(hotelId, checkInDate, checkOutDate ){
-        try{
-            // const { hotelId, checkInDate, checkOutDate } = this.ctx.request.body;
+    async getHotelDetails(){
+        // get hotel logic here
 
-            if(!mongoose.Types.ObjectId.isValid(hotelId)){
-                this.throwError("201", "Invalid hotel ID")
+        const hotelId = this.ctx.request.params?.hotelId
+        console.log(hotelId)
+
+        if(!mongoose.Types.ObjectId.isValid(hotelId)){
+            this.throwError("201", "Invalid hotel ID")
+        }
+
+        const hotelDetails = await this.models.Hotel.findById(hotelId)
+        let checkInDate = new Date(Date.now())
+        let checkOutDate = new Date(Date.now() + 24 * 60 * 60 * 1000) // One day from now
+
+        let availableRooms = await this.showRoomAvailability(hotelId, checkInDate, checkOutDate)
+
+        console.log(availableRooms)
+
+        if(!hotelDetails){
+            this.throwError("404", "Hotel not found")
+        }
+
+        this.ctx.body = {
+            success: true,
+            message: "Hotel fetched successfully",
+            data: {
+               hotelDetails,
+               availableRooms
             }
+        }
+    }
 
-            const hotelRooms = await this.models.Room.find({hotelId})
-            const conflictingBookings = await this.models.Booking.find({
-                roomId: { $in: hotelRooms.map(room => room._id) },
-                $or: [
-                    // Check if the booking overlaps with the desired dates
-                    { checkInDate: { $lt: checkOutDate }, checkOutDate: { $gt: checkInDate } }
-                ],
-                status: { $ne: 'CANCELLED' } // Exclude cancelled bookings
-            });
-
-            const bookedRoomIds = new Set(conflictingBookings.map(booking => booking.roomId.toString()));
-
-            // Step 4: Filter available rooms using the Set for O(1) lookup
-            const availableRooms = hotelRooms.filter(room => !bookedRoomIds.has(room._id.toString()));
+    async bookRoom() {
+        try {
+            const { hotelId, roomType, checkInDate, checkOutDate } = this.ctx.request.body;
     
-            // Return result
-            // this.ctx.body =  {
-            //     success: true,
-            //     message: "Room availability checked successfully",
-            //     data: {
-
-            //     isAvailable: availableRooms.length > 0, // True if there are available rooms
-            //     availableRooms // List of available rooms
-
-            //     }
-            // };
-
-            return {
-                isAvailable: availableRooms.length > 0, // True if there are available rooms
-                availableRooms // List of available rooms
+            if (!mongoose.Types.ObjectId.isValid(hotelId)) {
+                this.throwError("201", "Invalid hotel ID");
             }
+    
+            // Convert checkInDate and checkOutDate to Date objects
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
 
-            
-            
-        }catch(error){
-            console.error('Error checking room availability:', error);
-            throw new Error('Could not check room availability.');
-        }
-    }
-
-    async bookRoom(){
-        try{
-            const { hotelId, checkInDate, checkOutDate } = this.ctx.request.body;
-
-            if(!mongoose.Types.ObjectId.isValid(hotelId)){
-                this.throwError("201", "Invalid hotel ID")
+            console.log(checkIn,checkOut)
+    
+            if (checkIn >= checkOut) {
+                this.throwError("201", "Check-out date must be after check-in date");
             }
-
-            const availableRooms = await this.showRoomAvailability(hotelId, checkInDate, checkOutDate);
-            if(!availableRooms.isAvailable){
-                this.throwError("201", "No available rooms for the given dates")
+    
+            const availableRooms = await this.showRoomAvailability(hotelId, checkIn, checkOut);
+    
+            if (!availableRooms.availableRoomsByType[roomType]?.length) {
+                this.throwError("201", "No available rooms for the given dates");
             }
-
-            // console.log(availableRooms)
-
+    
+            // Get the first available room of the selected type
+            const roomToBook = availableRooms.availableRoomsByType[roomType][0];
+    
+            // Calculate the total number of days between check-in and check-out
+            const millisecondsPerDay = 24 * 60 * 60 * 1000;
+            const totalDays = Math.ceil((checkOut - checkIn)/millisecondsPerDay) ;
+            console.log(totalDays)
+    
+            // Calculate the total cost based on room price and total days
+            const totalCost = roomToBook.price * totalDays;
+    
             const booking = await this.models.Booking.create({
-                userId : this.ctx.user.userId,
+                userId: this.ctx.user.userId,
                 hotelId,
-                roomId:availableRooms.availableRooms[0]._id,
-                totalCost: 5000, // Calculate total cost in dollars
-                checkInDate,
-                checkOutDate,
+                roomId: roomToBook._id,
+                totalCost,
+                checkInDate: checkIn,
+                checkOutDate: checkOut,
                 status: 'CHECKED_IN'
-            })
-
-            this.ctx.body =  {
+            });
+    
+            this.ctx.body = {
                 success: true,
                 message: "Room booked successfully",
                 data: {
-                    bookingId: booking._id
+                    bookingId: booking._id,
+                    totalCost
                 }
-            }
-
-        }catch(error){
+            };
+        } catch (error) {
             console.error('Error booking room:', error);
             throw new Error('Could not book room.');
         }
     }
-
+    
     async cancelBooking(){
         try{
             const { bookingId } = this.ctx.params;
@@ -110,7 +116,10 @@ class Booking extends BaseClass{
                 this.throwError("201", "Invalid booking ID")
             }
 
-            const booking = await this.models.Booking.findOneAndUpdate({bookingId,status:{$ne: "CANCELLED"}}, { status: 'CANCELLED' }, { new: true });
+            console.log(this.ctx.user.userId)
+            const booking = await this.models.Booking.findOneAndUpdate({_id:bookingId,userId:this.ctx.user.userId,status:{$ne: "CANCELLED"}}, { status: 'CANCELLED' }, { new: true });
+            console.log(booking);
+            
 
             if(!booking){
                 this.throwError("201", "Booking not found or already cancelled")
@@ -127,6 +136,58 @@ class Booking extends BaseClass{
         }catch(error){
             console.error('Error cancelling booking:', error);
             throw new Error('Could not cancel booking.');
+        }
+    }
+
+    async getBookingDetails(){
+        try{
+            const { bookingId } = this.ctx.params;
+
+            if(!mongoose.Types.ObjectId.isValid(bookingId)){
+                this.throwError("201", "Invalid booking ID")
+            }
+
+            const booking = await this.models.Booking.findById(bookingId);
+
+            if(!booking){
+                this.throwError("201", "Booking not found")
+            }
+
+            console.log(booking.userId, this.ctx.user.userId)
+
+            if(!booking.userId.equals(this.ctx.user.userId)){
+                this.throwError("403", "Unauthorized to view this booking")
+            }
+
+            this.ctx.body =  {
+                success: true,
+                message: "Booking fetched successfully",
+                data: {
+                    booking
+                }
+            }
+
+        }catch(error){
+            console.error('Error fetching booking details:', error);
+            throw new Error('Could not fetch booking details.');
+        }
+    }
+
+    async getAllBookings(){
+        try{
+            const bookings = await this.models.Booking.find({userId: this.ctx.user.userId});
+
+            this.ctx.body =  {
+                success: true,
+                message: "Bookings fetched successfully",
+                data: {
+                    bookings
+                }
+            }
+
+        }catch(error){
+            console.error('Error fetching all bookings:', error);
+            throw new Error('Could not fetch all bookings.');
         }
     }
 }

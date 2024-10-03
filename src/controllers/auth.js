@@ -10,7 +10,6 @@ const Validation = require('../validations')
 function generateAccessToken(existingUser) {
 
     const token = JWT.sign({userId:existingUser._id,name:existingUser.name,email:existingUser.email,status:existingUser.status,isAdmin:existingUser.isAdmin},"JWT_SECRET")
-
     return token;
 
 

@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const Utilities = require("../utilities");
 const Promise = require('bluebird')
+const mongoose = require('mongoose')
 
 const JWT = require('jsonwebtoken')
 
@@ -39,6 +40,11 @@ class Base{
     callUpendra(){
         console.log(this["arvind"]);
         
+    }
+    generateAccessToken(existingUser) {
+
+        const token = JWT.sign({userId:existingUser._id,name:existingUser.name,email:existingUser.email,status:existingUser.status,isAdmin:existingUser.isAdmin},"JWT_SECRET")
+        return token;
     }
 
     throwError(code,message = null){
@@ -80,9 +86,70 @@ class Base{
         this.throwError("102", "Invalid token");
        
       }
+    }
 
+    async isAdmin(){
+        if(!this.ctx.user?.isAdmin){
+            this.throwError("403")
+        }
+    }
 
+    async showRoomAvailability(hotelId, checkInDate, checkOutDate ){
+        try{
+            // const { hotelId, checkInDate, checkOutDate } = this.ctx.request.body;
 
+            if(!mongoose.Types.ObjectId.isValid(hotelId)){
+                this.throwError("201", "Invalid hotel ID")
+            }
+
+            const hotelRooms = await this.models.Room.find({hotelId})
+            const conflictingBookings = await this.models.Booking.find({
+                roomId: { $in: hotelRooms.map(room => room._id) },
+                $or: [
+                    // Check if the booking overlaps with the desired dates
+                    { checkInDate: { $lt: checkOutDate }, checkOutDate: { $gt: checkInDate } }
+                ],
+                status: { $ne: 'CANCELLED' } // Exclude cancelled bookings
+            });
+
+            const bookedRoomIds = new Set(conflictingBookings.map(booking => booking.roomId.toString()));
+
+            // Step 4: Filter available rooms using the Set for O(1) lookup
+            // const availableRooms = hotelRooms.filter(room => !bookedRoomIds.has(room._id.toString()));
+
+            const availableRoomsByType = hotelRooms.reduce((acc, room) => {
+                if (!bookedRoomIds.has(room._id.toString())) {
+                    if (!acc[room.type]) {
+                        acc[room.type] = [];
+                    }
+                    acc[room.type].push(room);
+                }
+                return acc;
+            }, {});
+    
+            // Return result
+            // this.ctx.body =  {
+            //     success: true,
+            //     message: "Room availability checked successfully",
+            //     data: {
+
+            //     isAvailable: availableRooms.length > 0, // True if there are available rooms
+            //     availableRooms // List of available rooms
+
+            //     }
+            // };
+
+            return {
+                // isAvailable: availableRooms.length > 0, // True if there are available rooms
+                availableRoomsByType // List of available rooms
+            }
+
+            
+            
+        }catch(error){
+            console.error('Error checking room availability:', error);
+            throw new Error('Could not check room availability.');
+        }
     }
 
     async _executeBefore(methodName) {

@@ -13,4 +13,15 @@ r.delete('/booking/:bookingId', (ctx,next) => {
     return controller.execute('cancelBooking')
     })
 
+
+r.get('/booking/:bookingId', (ctx, next) => {
+    let controller = new Controller.Booking(ctx, next)
+    return controller.execute('getBookingDetails')
+    })
+
+r.get('/bookings', (ctx, next) => {
+    let controller = new Controller.Booking(ctx, next)
+    return controller.execute('getAllBookings')
+    })
+
 module.exports = r
