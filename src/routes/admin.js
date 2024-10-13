@@ -37,6 +37,11 @@ r.get("/admin/users", async (ctx, next) => {
     let controller = new Controller.Admin(ctx, next);
     await controller.execute('getAllUsers');
 });
+r.patch("/admin/users/:userId", async (ctx, next) => {
+    let controller = new Controller.Admin(ctx, next);
+    await controller.execute('updateUser');
+}
+)
 
 
 module.exports = r;

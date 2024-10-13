@@ -3,6 +3,7 @@ const path = require('path');
 const env = process.env.NODE_ENV||'development';
 const config = require(`./config/env/${env}.config.json`);
 const utilities = require("./src/utilities");
+const { v4: uuidv4 } = require('uuid')
 
 utilities.Registry.set("config", config);
 utilities.Registry.set("env", env);
@@ -34,17 +35,29 @@ utilities.Registry.set("models", models);
 
 const Koa = require('koa')
 const app = new Koa()
-const { koaBody } = require('koa-body');
+const koaBody = require('koa-body').default;
 require('koa-qs')(app, 'extended');
-app.use(koaBody());
+app.use(koaBody({
+	multipart: true,  // Enables multipart/form-data
+	formidable: {
+	  uploadDir: './src/uploads',  // Directory where uploaded files will be saved
+	  keepExtensions: true,    // Keep file extensions
+	  filename: (name, ext, part) => {
+		// Create a unique filename using UUID and original extension
+		const uniqueName = `${uuidv4()}${ext}`; // e.g., "123e4567-e89b-12d3-a456-426614174000.jpg"
+		return uniqueName;
+	},
+
+	}
+  }));
 
 app.use(async (ctx, next) => {
 	try {
-		ctx.set('Access-Control-Allow-Origin', '*');
-		ctx.set('Access-Control-Allow-Methods', '*');
-		ctx.set('Access-Control-Allow-Headers', '*');
+		ctx.set('Access-Control-Allow-Origin', 'http://localhost:5173');
+		ctx.set('Access-Control-Allow-Methods', 'GET, POST,PATCH, PUT, DELETE, OPTIONS');
+		ctx.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+		ctx.set('Access-Control-Allow-Credentials', 'true'); 
 		await next();
-		console.log("printing something")
 	} catch (error) {
 		console.log('Process.Error', error);
 		ctx.status = error.status || 500;

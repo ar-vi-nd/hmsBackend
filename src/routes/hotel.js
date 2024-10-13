@@ -14,6 +14,11 @@ r.get('/api/hotels/:hotelId', (ctx, next) => {
     return controller.execute('getHotelDetails')
 })
 
+r.get('/api/checkAvailability', (ctx, next) => {
+    let controller = new Controller.Hotel(ctx, next)
+    return controller.execute('checkAvailability')
+})
+
 r.post('/api/hotels', (ctx, next) => {
     let controller = new Controller.Hotel(ctx, next)
     return controller.execute('addHotel')

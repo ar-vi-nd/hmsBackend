@@ -1,307 +1,268 @@
-const BaseClass = require('./base')
-const _ = require('lodash')
-const Validation = require('../validations')
-const mongoose = require('mongoose');
+const BaseClass = require("./base");
+const _ = require("lodash");
+const Validation = require("../validations");
+const mongoose = require("mongoose");
 
+class Admin extends BaseClass {
+  constructor(ctx, next) {
+    super(ctx, next);
+    this._beforeMethods = {
+      addHotel: ["authMiddleware", "isAdmin"],
+      removeHotel: ["authMiddleware", "isAdmin"],
+      getHotels: ["authMiddleware", "isAdmin"],
+      updateHotel: ["authMiddleware", "isAdmin"],
+      getAllUsers: ["authMiddleware", "isAdmin"],
+      login: [],
+    };
+  }
 
-class Admin extends BaseClass{
-    constructor(ctx, next) {
-        super(ctx,next)
-        this._beforeMethods = {
-            addHotel : ['authMiddleware','isAdmin'],
-            removeHotel : ['authMiddleware','isAdmin'],
-            getHotels : ['authMiddleware','isAdmin'],
-            updateHotel : ['authMiddleware','isAdmin'],
-            getAllUsers : ['authMiddleware','isAdmin'],
-            login : ['authMiddleware','isAdmin']
-        }
- 
+  async isAdmin() {
+    if (!this.ctx.user?.isAdmin) {
+      this.throwError("403");
+    }
+  }
+
+  async register() {
+    let { value, error } = Validation.Auth.AdminRegisterSchema.validate(
+      this.ctx.request.body
+    );
+    if (error) {
+      let errorMessage =
+        _.size(error.details) > 0 ? error.details[0].message : null;
+      this.throwError("201", errorMessage);
+    }
+    // check if user already or not
+    let admin = await this.models.Admin.findOne({ email: value.email });
+    if (admin) {
+      this.throwError("201", "Admin already exist");
+    }
+    admin = new this.models.Admin({
+      email: value.email,
+      password: value.password,
+      name: value.name,
+      status: this.schemas.Admin.constants.status.active,
+      isAdmin: false,
+    });
+
+    try {
+      this;
+      await admin.save();
+    } catch (error) {
+      this.throwError("301");
     }
 
-    async isAdmin(){
-        if(!this.ctx.user?.isAdmin){
-            this.throwError("403")
-        }
+    this.ctx.body = {
+      success: true,
+      message: "Admin registered successfully",
+      data: {
+        admin,
+      },
+    };
+  }
+
+  async login() {
+    let { value, error } = Validation.Auth.AdminLoginSchema.validate(
+      this.ctx.request.body
+    );
+    if (error) {
+      let errorMessage =
+        _.size(error.details) > 0 ? error.details[0].message : null;
+      this.throwError("201", errorMessage);
     }
 
-
-    async register(){
-        let {value, error} = Validation.Auth.AdminRegisterSchema.validate(this.ctx.request.body);
-        if (error) {
-			let errorMessage = _.size(error.details) > 0 ? error.details[0].message : null;
-			this.throwError("201", errorMessage);
-		}
-        // check if user already or not
-        let admin = await this.models.Admin.findOne({email: value.email});
-        if (admin) {
-            this.throwError("201", "Admin already exist");
-        }
-        admin = new this.models.Admin({
-            email: value.email,
-            password: value.password,
-            name: value.name,
-            status: this.schemas.Admin.constants.status.active,
-            isAdmin: false
-        });
-
-        try {
-            this
-            await admin.save();
-        } catch (error) {
-            this.throwError("301")
-        }
-
-        this.ctx.body = {
-            success: true,
-            message: "Admin registered successfully",
-            data: {
-                admin
-            }
-        }
+    let admin = await this.models.Admin.findOne({ email: value.email });
+    console.log(admin);
+    if (!admin) {
+      this.throwError("400", "Invalid Credentials");
     }
+    const isMatch = await admin.verifyPassword(value.password);
 
+    console.log(isMatch);
 
-
-    async login(){
-        let {value, error} = Validation.Auth.AdminLoginSchema.validate(this.ctx.request.body);
-        if (error) {
-            let errorMessage = _.size(error.details) > 0 ? error.details[0].message : null;
-			this.throwError("201", errorMessage);
-        }
-
-        let admin = await this.models.Admin.findOne({email:value.email});
-        console.log(admin)
-        if (!admin) {
-
-            this.throwError("400", "Invalid Credentials");
-        }
-        const isMatch = await admin.verifyPassword(value.password)
-
-        console.log(isMatch)
-
-        if (!isMatch) {
-            this.throwError("400", "Invalid credentials");
-        }
-        console.log(admin)
-
-        const accessToken = this.generateAccessToken(admin)
-
-        console.log(accessToken)
-
-        this. ctx.cookies.set('accessToken', accessToken, {
-            httpOnly: true, // Makes the cookie accessible only by the web server
-            maxAge: 1000 * 60 * 60 * 24, // 1 day in milliseconds
-            secure: false, // If true, only send cookie over HTTPS
-            sameSite: 'lax' // Controls cross-site request behavior
-          });
-
-        this.ctx.body = {
-            success: true,
-            message: "Admin logged in successfully",
-            data: {
-                admin
-            }
-        }
+    if (!isMatch) {
+      this.throwError("400", "Invalid credentials");
     }
+    console.log(admin);
 
-    async addHotel(){
-        // add hotel logic here
+    const accessToken = this.generateAccessToken(admin);
 
-        const {value,error} = Validation.Hotel.HotelRegisterSchema.validate(this.ctx.request.body)
-        if (error) {
-			let errorMessage = _.size(error.details) > 0 ? error.details[0].message : null;
-			this.throwError("201", errorMessage);
-		}
+    console.log(accessToken);
 
-        const {name,owner,address,contact,pictures} = value
-        try{
+    this.ctx.cookies.set("accessToken", accessToken, {
+      httpOnly: true, // Makes the cookie accessible only by the web server
+      maxAge: 1000 * 60 * 60 * 24, // 1 day in milliseconds
+      secure: false, // If true, only send cookie over HTTPS
+    });
 
-        const addedHotel = await this.models.Hotel.create(value)
+    this.ctx.body = {
+      success: true,
+      message: "Admin logged in successfully",
+      data: {
+        admin,
+      },
+    };
+  }
 
-        console.log(value)
+  // TODO:
 
-        const {roomCounts}= value
+  async getAllUsers() {
+    const { search, page = 1, limit = 10, sort } = this.ctx.query; // Extract query parameters
 
-
-        // let totalRooms = roomCounts.single+roomCounts.double+roomCounts.deluxe
-
-        for(let i=0;i< roomCounts.single.count;i++){
-            await this.models.Room.create({hotelId:addedHotel._id,roomNumber:1000+i,type:"single",price:roomCounts.single.price,isBooked: false})
-        }
-        for(let i=0;i< roomCounts.double.count;i++){
-            await this.models.Room.create({hotelId:addedHotel._id,roomNumber:100+i,type:"double",price:roomCounts.double.price,isBooked: false})
-        }
-        for(let i=0;i< roomCounts.deluxe.count;i++){
-            await this.models.Room.create({hotelId:addedHotel._id,roomNumber:10+i,type:"deluxe",price:roomCounts.deluxe.price,isBooked: false})
-        }
-
-
-        
-
-        this.ctx.body = {
-            success: true,
-            message: "Hotel added successfully",
-            data: {
-               
-            }
-        }
-    }
-    catch(error){
-        console.log(error)
-    }
-    }
-
-    async removeHotel() {
-        console.log(this.ctx.request?.params);
+    console.log({ search, page , limit , sort })
     
-        const  hotelId  = this.ctx.request?.params?.id;
-
-        console.log(hotelId)
-
-        if(!mongoose.Types.ObjectId.isValid(hotelId)){
-            this.throwError("201", "Invalid hotel ID")
-        }
-
-        
-    
-        try {
-            // Remove all rooms associated with the hotelId
-            await this.models.Room.deleteMany({ hotelId });
-    
-            // Remove the hotel itself
-            await this.models.Hotel.findByIdAndDelete(hotelId);
-    
-            this.ctx.body = {
-                success: true,
-                message: "Hotel and associated rooms removed successfully",
-                data: {}
-            };
-        } catch (error) {
-            console.log(error);
-            this.ctx.body = {
-                success: false,
-                message: "Error removing hotel",
-                data: { error: error.message }
-            };
-        }
-    }
-    
-
-    async updateHotel(){
-        // update hotel logic here
-        
-
-        const hotelId = this.ctx.request.params?.id
-        console.log(hotelId)
-
-        if(!mongoose.Types.ObjectId.isValid(hotelId)){
-            this.throwError("201", "Invalid hotel ID")
-        }
-
-
-        const hotelDetails = await this.models.Hotel.findById(hotelId)
-        if(!hotelDetails){
-            this.throwError("404", "Hotel not found")
-        }
-
-        const {value,error} = Validation.Hotel.HotelRegisterSchema.validate(this.ctx.request.body)
-        if (error) {
-            let errorMessage = _.size(error.details) > 0? error.details[0].message : null;
-            this.throwError("201", errorMessage);
-        }
-        const newHotelDetails = await this.models.Hotel.findByIdAndUpdate(hotelId,{$set:value},{new:true})
-
-        console.log(newHotelDetails)
-
-
-
-
-        this.ctx.body = {
-            success: true,
-            message: "Hotel updated successfully",
-            data: {
-               newHotelDetails
-            }
-        }
-    }
-
-    async getHotelsAll(){
-        // get hotels logic here
-
-        const { city, zipcode, limit } = this.ctx.query; // Extract query parameters
-
     // Build query object based on provided parameters
-    let query = {};
-
-    if (city) {
-        query['address.city'] = city; // Filter by city if provided
-    }
-
-    if (zipcode) {
-        query['address.zipcode'] = zipcode; // Filter by zipcode if provided
-    }
-
-    console.log(query)
-
-    // Fetch hotels based on the query, limit the number of results if provided
-    const hotels = await this.models.Hotel.find(query).limit(limit ? parseInt(limit) : 10);
-
-        this.ctx.body = {
-            success: true,
-            message: "Hotels fetched successfully",
-            data: {
-               hotels
-            }
-        }
-    }
-
-
-    async getHotel(){
-        // get hotel logic here
-
-        const hotelId = this.ctx.request.params?.hotelId
-        console.log(hotelId)
-
-        if(!mongoose.Types.ObjectId.isValid(hotelId)){
-            this.throwError("201", "Invalid hotel ID")
-        }
-
-        const hotelDetails = await this.models.Hotel.findById(hotelId)
-        let checkInDate = new Date(Date.now())
-        let checkOutDate = new Date(Date.now() + 24 * 60 * 60 * 1000) // One day from now
-
-        let availableRooms = await this.showRoomAvailability(hotelId, checkInDate, checkOutDate)
-
-        console.log(availableRooms)
-
-        if(!hotelDetails){
-            this.throwError("404", "Hotel not found")
-        }
-
-        this.ctx.body = {
-            success: true,
-            message: "Hotel fetched successfully",
-            data: {
-               hotelDetails
-            }
-        }
-    }
-
-    async getAllUsers(){
-
-        const users = await this.models.User.find({})
-        this.ctx.body = {
-            success: true,
-            message: "Users fetched successfully",
-            data: {
-               users
-            }
-        }
-    }
-
+    let query = {};   
     
+    // Use a case-insensitive regular expression for city substring match
+    if (search && search !== "undefined") {
+        query['name'] = { $regex: search, $options: 'i' }; // 'i' makes it case-insensitive
+    }
+
+    // Initialize the sort object
+    let sortQuery = {};
+
+    // Determine the sorting logic based on the 'sort' parameter
+    if (sort === 'asc') {
+        sortQuery['name'] = 1;  // Sort by hotel name in ascending order (case-insensitive)
+    } else if (sort === 'desc') {
+        sortQuery['name'] = -1; // Sort by hotel name in descending order (case-insensitive)
+    } else if (sort === '1') {
+        sortQuery['created'] = 1;  // Sort by creation date in ascending order
+    } else if (sort === '-1') {
+        sortQuery['created'] = -1; // Sort by creation date in descending order
+    }
+
+    console.log({query, sortQuery});
+    const users = await this.models.User.find(query)
+    .collation({ locale: 'en', strength: 2 })  // Case-insensitive collation for sorting
+    .sort(sortQuery)  
+    .skip((page - 1) * limit)
+    .limit(limit ? parseInt(limit) : 10);
+
+    const totalUsers = await this.models.User.countDocuments(query);
+
+    this.ctx.body = {
+      success: true,
+      message: "Users fetched successfully",
+      data: {
+        users,
+        totalUsers,
+      },
+    };
+  }
+
+  async getUserDetails() {
+    const userId = this.ctx.request.params?.userId;
+    console.log(userId);
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      this.throwError("201", "Invalid user ID");
+    }
+
+    const userDetails = await this.models.User.findById(userId);
+
+    if (!userDetails) {
+      this.throwError("404", "User not found");
+    }
+
+    this.ctx.body = {
+      success: true,
+      message: "User fetched successfully",
+      data: {
+        userDetails,
+      },
+    };
+  }
+
+  async updateUser() {
+
+    try {
+
+      const userId = this.ctx.request.params?.userId;
+      if (!mongoose.Types.ObjectId.isValid(userId)){
+        this.throwError("201", "Invalid user ID");
+      }
+      const user = await this.models.User.findById(userId);
+      if(!user){
+        this.throwError("404", "User not found");
+      }
+      const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      const updatedUser = await this.models.User.findByIdAndUpdate(
+        userId,
+        { $set: { status: newStatus } },
+        { new: true } // Return the updated document
+      );
+
+      this.ctx.body = {
+        success: true,
+        message: `User status updated to ${newStatus}`,
+        data: {
+          updatedUser,
+        },
+      }
 
 
+      
+    } catch (error) {
+      
+      console.log(error)
+    }
+
+  }
+
+  async getUserBookings() {
+    const userId = this.ctx.request.params?.userId;
+    console.log(userId);
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      this.throwError("201", "Invalid user ID");
+    }
+
+    const userBookings = await this.models.Booking.find({ userId });
+
+    if (!userBookings) {
+      this.throwError("404", "User bookings not found");
+    }
+
+    this.ctx.body = {
+      success: true,
+      message: "User bookings fetched successfully",
+      data: {
+        userBookings,
+      },
+    };
+  }
+
+  async getUserBookingDetails() {
+    const userId = this.ctx.request.params?.userId;
+    const bookingId = this.ctx.request.params?.bookingId;
+    console.log(userId, bookingId);
+
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(bookingId)
+    ) {
+      this.throwError("201", "Invalid user ID or booking ID");
+    }
+
+    const bookingDetails = await this.models.Booking.findById(
+      bookingId
+    ).populate("hotelId");
+
+    if (!bookingDetails) {
+      this.throwError("404", "Booking not found");
+    }
+
+    this.ctx.body = {
+      success: true,
+      message: "Booking fetched successfully",
+      data: {
+        bookingDetails,
+      },
+    };
+  }
+
+  async updateBooking() {}
 }
 
 module.exports = Admin;

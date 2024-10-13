@@ -3,23 +3,24 @@ const Controller = require('../controllers')
 
 const r = new Router()
 
-r.post('/booking', (ctx,next) => {
+r.post('/api/booking', (ctx,next) => {
+    console.log(ctx.request)
     let controller = new Controller.Booking(ctx, next)
     return controller.execute('bookRoom')
 
 })
-r.delete('/booking/:bookingId', (ctx,next) => {
+r.delete('/api/booking/:bookingId', (ctx,next) => {
     let controller = new Controller.Booking(ctx, next)
     return controller.execute('cancelBooking')
     })
 
 
-r.get('/booking/:bookingId', (ctx, next) => {
+r.get('/api/booking/:bookingId', (ctx, next) => {
     let controller = new Controller.Booking(ctx, next)
     return controller.execute('getBookingDetails')
     })
 
-r.get('/bookings', (ctx, next) => {
+r.get('/api/bookings', (ctx, next) => {
     let controller = new Controller.Booking(ctx, next)
     return controller.execute('getAllBookings')
     })

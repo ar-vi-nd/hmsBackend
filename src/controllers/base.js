@@ -62,8 +62,8 @@ class Base{
 
     async authMiddleware(){
         // console.log(this.ctx.request)
-        const token = this.ctx.request.header?.authorization?.split(' ')[1]
-        // console.log(token)
+        const token = this.ctx.request.header?.authorization?.split(' ')[1] || this.ctx?.request?.header?.cookie?.split('=')[1]
+        console.log(token)
         if (!token) {
             this.throwError("102", "Token not provided");
         }
@@ -90,74 +90,140 @@ class Base{
 
     async isAdmin(){
         if(!this.ctx.user?.isAdmin){
-            this.throwError("403")
+            this.throwError("403","Unauthorized");
         }
     }
 
-    async showRoomAvailability(hotelId, checkInDate, checkOutDate ){
-        try{
-            // const { hotelId, checkInDate, checkOutDate } = this.ctx.request.body;
+    // async showRoomAvailability(hotelId, checkInDate, checkOutDate ){
+    //     try{
+    //         // const { hotelId, checkInDate, checkOutDate } = this.ctx.request.body;
 
-            if(!mongoose.Types.ObjectId.isValid(hotelId)){
-                this.throwError("201", "Invalid hotel ID")
+    //         if(!mongoose.Types.ObjectId.isValid(hotelId)){
+    //             this.throwError("201", "Invalid hotel ID")
+    //         }
+
+    //         const hotelRooms = await this.models.Room.find({hotelId})
+    //         const conflictingBookings = await this.models.Booking.find({
+    //             roomId: { $in: hotelRooms.map(room => room._id) },
+    //             $or: [
+    //                 // Check if the booking overlaps with the desired dates
+    //                 { checkInDate: { $lt: checkOutDate }, checkOutDate: { $gt: checkInDate } }
+    //             ],
+    //             status: { $ne: 'CANCELLED' } // Exclude cancelled bookings
+    //         });
+
+    //         const bookedRoomIds = new Set(conflictingBookings.map(booking => booking.roomId.toString()));
+
+    //         // Step 4: Filter available rooms using the Set for O(1) lookup
+    //         // const availableRooms = hotelRooms.filter(room => !bookedRoomIds.has(room._id.toString()));
+
+    //         const availableRoomsByType = hotelRooms.reduce((acc, room) => {
+    //             if (!bookedRoomIds.has(room._id.toString())) {
+    //                 if (!acc[room.type]) {
+    //                     acc[room.type] = [];
+    //                 }
+    //                 acc[room.type].push(room);
+    //             }
+    //             return acc;
+    //         }, {});
+    
+    //         // Return result
+    //         // this.ctx.body =  {
+    //         //     success: true,
+    //         //     message: "Room availability checked successfully",
+    //         //     data: {
+
+    //         //     isAvailable: availableRooms.length > 0, // True if there are available rooms
+    //         //     availableRooms // List of available rooms
+
+    //         //     }
+    //         // };
+
+    //         return {
+    //             // isAvailable: availableRooms.length > 0, // True if there are available rooms
+    //             availableRoomsByType // List of available rooms
+    //         }
+
+            
+            
+    //     }catch(error){
+    //         console.error('Error checking room availability:', error);
+    //         throw new Error('Could not check room availability.');
+    //     }
+    // }
+
+    async showRoomAvailability(hotelId, checkInDate, checkOutDate) {
+        try {
+            if (!mongoose.Types.ObjectId.isValid(hotelId)) {
+                this.throwError("201", "Invalid hotel ID");
             }
-
-            const hotelRooms = await this.models.Room.find({hotelId})
+    
+            // Convert checkInDate and checkOutDate to Date objects for comparison
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
+    
+            // Step 1: Fetch all rooms for the given hotel
+            const hotelRooms = await this.models.Room.find({ hotelId });
+    
+            // Step 2: Fetch conflicting bookings that overlap with the desired dates for the specific rooms in the hotel
             const conflictingBookings = await this.models.Booking.find({
-                roomId: { $in: hotelRooms.map(room => room._id) },
-                $or: [
-                    // Check if the booking overlaps with the desired dates
-                    { checkInDate: { $lt: checkOutDate }, checkOutDate: { $gt: checkInDate } }
-                ],
-                status: { $ne: 'CANCELLED' } // Exclude cancelled bookings
+                "rooms": {
+                    $elemMatch: {
+                        roomId: { $in: hotelRooms.map(room => room._id) },  // Match the rooms in the hotel
+                        checkInDate: { $lt: checkOut },   // Use converted date to compare
+                        checkOutDate: { $gt: checkIn }    // Use converted date to compare
+                    }
+                },
+                status: { $ne: 'CANCELLED' }  // Exclude cancelled bookings
             });
-
-            const bookedRoomIds = new Set(conflictingBookings.map(booking => booking.roomId.toString()));
-
-            // Step 4: Filter available rooms using the Set for O(1) lookup
-            // const availableRooms = hotelRooms.filter(room => !bookedRoomIds.has(room._id.toString()));
-
+    
+            // Step 3: Extract booked room IDs from the conflicting bookings
+            const bookedRoomIds = new Set();
+            conflictingBookings.forEach(booking => {
+                booking.rooms.forEach(room => {
+                    const roomCheckIn = new Date(room.checkInDate);
+                    const roomCheckOut = new Date(room.checkOutDate);
+    
+                    // Compare room's check-in and check-out dates with desired dates
+                    if (roomCheckIn < checkOut && roomCheckOut > checkIn) {
+                        bookedRoomIds.add(room.roomId.toString());
+                    }
+                });
+            });
+    
+            // Step 4: Filter available rooms
             const availableRoomsByType = hotelRooms.reduce((acc, room) => {
                 if (!bookedRoomIds.has(room._id.toString())) {
                     if (!acc[room.type]) {
                         acc[room.type] = [];
                     }
-                    acc[room.type].push(room);
+                    acc[room.type].push(room);  // Group available rooms by their type
                 }
                 return acc;
             }, {});
     
-            // Return result
-            // this.ctx.body =  {
-            //     success: true,
-            //     message: "Room availability checked successfully",
-            //     data: {
-
-            //     isAvailable: availableRooms.length > 0, // True if there are available rooms
-            //     availableRooms // List of available rooms
-
-            //     }
-            // };
-
+            // Return the available rooms grouped by type
             return {
-                // isAvailable: availableRooms.length > 0, // True if there are available rooms
-                availableRoomsByType // List of available rooms
-            }
-
-            
-            
-        }catch(error){
+                availableRoomsByType
+            };
+    
+        } catch (error) {
             console.error('Error checking room availability:', error);
             throw new Error('Could not check room availability.');
         }
     }
+    
+    
+    
+    
+
+    
 
     async _executeBefore(methodName) {
         if (_.size(this._beforeMethods) == 0 || !this._beforeMethods[methodName] || _.size(this._beforeMethods[methodName]) == 0) {
 			return;
 		}
 		await Promise.each(this._beforeMethods[methodName], async(m) => {
-            console.log(this[m])
 			await this[m](this.ctx, this.next); 
 		});
     }

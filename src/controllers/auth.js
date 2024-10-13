@@ -92,11 +92,10 @@ class Auth extends BaseClass{
 
         console.log(accessToken)
 
-        this. ctx.cookies.set('accessToken', accessToken, {
+        this.ctx.cookies.set('accessToken', accessToken, {
             httpOnly: true, // Makes the cookie accessible only by the web server
             maxAge: 1000 * 60 * 60 * 24, // 1 day in milliseconds
             secure: false, // If true, only send cookie over HTTPS
-            sameSite: 'lax' // Controls cross-site request behavior
           });
 
         this.ctx.body = {

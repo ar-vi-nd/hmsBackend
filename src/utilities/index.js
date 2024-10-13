@@ -1,4 +1,7 @@
+const { uploadOnCloudinary } = require('./cloudinary');
+
 module.exports = {
     Client: require('./client'),
-    Registry: require('./registry')
+    Registry: require('./registry'),
+    Cloudinary : require('./cloudinary')
 }

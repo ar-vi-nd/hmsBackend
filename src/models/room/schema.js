@@ -11,8 +11,8 @@ let schema = new Schema({
     roomNumber: {
             type: String,
             required: true,
-            minlength: 2,
-            maxlength: 5
+            minlength: 1,
+            maxlength: 10
     },
     type: {
         type: String,

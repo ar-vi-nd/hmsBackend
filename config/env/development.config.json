@@ -31,5 +31,10 @@
     },
     "application": {
         "port": 1111
+    },
+    "cloudinary": {
+        "cloud_name": "mikekacloud",
+        "api_key": 728659962914155,
+        "api_secret": "Q7AFeJXoxSjlO4nRYEnsDFsvsFg"
     }
 }
