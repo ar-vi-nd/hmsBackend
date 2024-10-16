@@ -9,7 +9,7 @@ r.post('/api/booking', (ctx,next) => {
     return controller.execute('bookRoom')
 
 })
-r.delete('/api/booking/:bookingId', (ctx,next) => {
+r.patch('/api/booking/:bookingId', (ctx,next) => {
     let controller = new Controller.Booking(ctx, next)
     return controller.execute('cancelBooking')
     })
@@ -20,7 +20,7 @@ r.get('/api/booking/:bookingId', (ctx, next) => {
     return controller.execute('getBookingDetails')
     })
 
-r.get('/api/bookings', (ctx, next) => {
+r.get('/api/bookings/:userId', (ctx, next) => {
     let controller = new Controller.Booking(ctx, next)
     return controller.execute('getAllBookings')
     })

@@ -24,7 +24,8 @@ class Auth extends BaseClass{
 
         this._beforeMethods = {
             register : ["Arvind"],
-            home : ["authMiddleware"]
+            home : ["authMiddleware"],
+            updateProfile: ["authMiddleware"]
         }
     }
 
@@ -40,11 +41,13 @@ class Auth extends BaseClass{
         if (user) {
             this.throwError("201", "User already exist");
         }
+        console.log({value})
         user = new this.models.User({
             email: value.email,
             password: value.password,
             name: value.name,
-            status: this.schemas.User.constants.status.active
+            status: this.schemas.User.constants.status.active,
+            phoneNo : value.phoneNo
         });
 
         try {
@@ -68,18 +71,21 @@ class Auth extends BaseClass{
         let {value, error} = Validation.Auth.UserLoginSchema.validate(this.ctx.request.body);
         if (error) {
             let errorMessage = _.size(error.details) > 0 ? error.details[0].message : null;
-			this.throwError("201", errorMessage);
+			this.throwError("201", "Invalid Credentials");
         }
         console.log(value.email)
-        let user = await this.models.User.findOne({email: value.email})||await this.models.Admin.findOne({email:value.email});
+        let user = await this.models.User.findOne({email: value.email});
         console.log(user)
         if (!user) {
 
-            this.throwError("400", "User not found");
+            this.throwError("400", "Invalid Credentials");
+        }
+        if(user?.status === 'inactive'){
+            this.throwError("400", "Your account has been blocked")
         }
 
         console.log(value.password)
-        const isMatch = await user.verifyPassword(value.password)|| (user.password === value.password);
+        const isMatch = await user.verifyPassword(value.password);
 
         console.log(isMatch)
 
@@ -126,6 +132,75 @@ class Auth extends BaseClass{
     async Arvind(){
         console.log("Arvind")
     }
+
+
+    async updateProfile() {
+
+        
+       try {
+         let { value, error } = Validation.Auth.UserUpdateProfileSchema.validate(this.ctx.request.body);
+         
+         if (error) {
+             let errorMessage = _.size(error.details) > 0 ? error.details[0].message : null;
+             this.throwError("201", errorMessage);
+         }
+ 
+         const {userId} = this.ctx.request.params
+         
+         // Fetch the current user
+         let currentUser = await this.models.User.findById(userId);
+         if (!currentUser) {
+             this.throwError("404", "User not found");
+         }
+     
+         // Check if the email is different from the current one
+         if (value.email && value.email !== currentUser.email) {
+             // Check if another user already has the same email
+             let existingUserWithSameEmail = await this.models.User.findOne({ email: value.email });
+             if (existingUserWithSameEmail) {
+                 this.throwError("201", "User with the same email already exists");
+             }
+         }
+     
+         // Update the user's profile
+         let updatedUser = await this.models.User.findByIdAndUpdate(
+             userId,
+             {
+                 name: value.name || currentUser.name,  // Update name only if provided
+                 phone: value.phone || currentUser.phone,  // Update phone only if provided
+                 email: value.email || currentUser.email  // Update email if provided and not same
+             },
+             { new: true }
+         );
+     
+         this.ctx.body = {
+             success: true,
+             message: "User updated successfully",
+             data: {
+                 user: updatedUser
+             }
+         };
+       } catch (error) {
+
+        console.log(error)
+         this.throwError("500", "Error updating user profile");
+        
+       }
+    }
+
+
+    async logout(){
+        this.ctx.cookies.set('accessToken', '', {
+            httpOnly: true,
+            expires: new Date(0), // Deletes the cookie
+          });
+
+        this.ctx.body = {
+            success: true,
+            message: "User logged out successfully"
+        }
+    }
+    
 
 
 }

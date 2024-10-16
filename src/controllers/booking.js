@@ -114,7 +114,7 @@ class Booking extends BaseClass{
 
     async bookRoom() {
         try {
-            const { hotelId, roomType, checkInDate, checkOutDate, roomsCount } = this.ctx.request.body;
+            const { hotelId, roomType, checkInDate, checkOutDate, roomCount } = this.ctx.request.body;
     
             if (!mongoose.Types.ObjectId.isValid(hotelId)) {
                 this.throwError("201", "Invalid hotel ID");
@@ -132,33 +132,38 @@ class Booking extends BaseClass{
             const availableRooms = await this.showRoomAvailability(hotelId, checkIn, checkOut);
     
             // Check if there are enough rooms of the requested type
-            if (!availableRooms.availableRoomsByType[roomType] || availableRooms.availableRoomsByType[roomType].length < roomsCount) {
+            if (!availableRooms.availableRoomsByType[roomType] || availableRooms.availableRoomsByType[roomType].length < roomCount) {
                 this.throwError("201", "Not enough available rooms for the given dates and room type");
             }
     
             // Get the rooms to be booked (the first `roomsCount` rooms of the requested type)
-            const roomsToBook = availableRooms.availableRoomsByType[roomType].slice(0, roomsCount);
+            const roomsToBook = availableRooms.availableRoomsByType[roomType].slice(0, roomCount);
     
             // Calculate the total number of days between check-in and check-out
             const millisecondsPerDay = 24 * 60 * 60 * 1000;
             const totalDays = Math.ceil((checkOut - checkIn) / millisecondsPerDay);
+
+  
     
             // Calculate the total cost for all rooms
-            const totalCost = roomsToBook.reduce((sum, room) => sum + room.price * totalDays, 0);
+            const totalCost = Number((availableRooms?.availableRoomsByType[roomType]?.[0]?.price)*roomCount*totalDays)
+
+            console.log(totalCost)
     
             // Prepare room details for booking
             const roomsDetails = roomsToBook.map(room => ({
                 roomId: room._id,
                 checkInDate: checkIn,
                 checkOutDate: checkOut,
-                totalCost: room.price * totalDays
             }));
     
             // Create the booking with multiple rooms
             const booking = await this.models.Booking.create({
                 userId: this.ctx.user.userId,
                 rooms: roomsDetails, // Store all the rooms in the booking
-                status: 'CHECKED_IN'
+                status: 'BOOKED',
+                hotelId: hotelId,
+                totalCost: totalCost
             });
     
             this.ctx.body = {
@@ -269,17 +274,16 @@ class Booking extends BaseClass{
                 })
                 .populate({
                     path: 'rooms.roomId',  // Populate the rooms array with room details
-                    populate: {
-                        path: 'hotelId',  // Populate the hotelId for each room
-                    }
-                });
+                })
+                .populate({
+                    path: 'hotelId'
+                })
     
             if (!booking) {
                 this.throwError("201", "Booking not found");
             }
-    
             // Ensure the user making the request is authorized to view this booking
-            if (!booking.userId.equals(this.ctx.user.userId)) {
+            if (!booking.userId.equals(this.ctx.user.userId)&& !this.ctx.user.isAdmin) {
                 this.throwError("403", "Unauthorized to view this booking");
             }
     
@@ -301,7 +305,13 @@ class Booking extends BaseClass{
 
     async getAllBookings(){
         try{
-            const bookings = await this.models.Booking.find({userId: this.ctx.user.userId});
+            console.log(this.ctx.request.params)
+            const {userId} = this.ctx.request.params
+
+            if(!mongoose.Types.ObjectId.isValid(userId)){
+                this.throwError("201", "Invalid user ID")
+            }
+            const bookings = await this.models.Booking.find({userId: this.ctx.user.userId}).sort({created:-1}).populate({path: 'hotelId'});
 
             this.ctx.body =  {
                 success: true,

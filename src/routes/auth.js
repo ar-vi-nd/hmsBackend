@@ -27,4 +27,14 @@ r.get("/auth/home",async (ctx, next) => {
     await controller.execute('home');
 });
 
+r.patch("/auth/profile/:userId",async (ctx, next) => {
+    let controller = new Controller.Auth(ctx, next);
+    await controller.execute('updateProfile');
+    })
+
+r.get("/auth/logout",async (ctx, next) => {
+    let controller = new Controller.Auth(ctx, next)
+    await controller.execute('logout');
+})
+
 module.exports = r;

@@ -65,7 +65,7 @@ class Base{
         const token = this.ctx.request.header?.authorization?.split(' ')[1] || this.ctx?.request?.header?.cookie?.split('=')[1]
         console.log(token)
         if (!token) {
-            this.throwError("102", "Token not provided");
+            this.throwError("102", "Please Login First");
         }
         // verify token
 

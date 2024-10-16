@@ -1,7 +1,7 @@
 const cloudinary = require("cloudinary").v2;
 const env = process.env.NODE_ENV||'development';
 const config = require(`../../config/env/${env}.config.json`);
-console.log(config)
+// console.log(config)
 
 const fs = require("fs");
 // import dotenv from 'dotenv'
@@ -11,7 +11,7 @@ const fs = require("fs");
 
 // console.log("inside cloudinary printing process.env :",process.env.CLOUDINARY_API_KEY)
 
-console.log(config.cloudinary.api_key)
+// console.log(config.cloudinary.api_key)
 cloudinary.config({ 
     
     cloud_name: config.cloudinary.cloud_name, 

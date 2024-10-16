@@ -27,6 +27,12 @@ let schema = new Schema({
         required: true,
         bcrypt: true
     },
+    phoneNo:{
+        type: String,
+        required: true,
+        minlength: 10,
+        maxlength: 15
+    },
     address_list: {
         type: [address],
         max: 5

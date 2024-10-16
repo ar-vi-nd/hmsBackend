@@ -40,8 +40,22 @@ r.get("/admin/users", async (ctx, next) => {
 r.patch("/admin/users/:userId", async (ctx, next) => {
     let controller = new Controller.Admin(ctx, next);
     await controller.execute('updateUser');
-}
-)
+})
+r.get("/admin/bookings", async (ctx, next) => {
+    let controller = new Controller.Admin(ctx, next);
+    await controller.execute('getAdminBookings');
+})
+r.patch("/admin/bookings/:bookingId", async (ctx, next) => {
+    let controller = new Controller.Admin(ctx, next);
+    await controller.execute('updateBooking');
+})
+
+r.get('/admin/dashboard', async (ctx, next) => {
+    let controller = new Controller.Admin(ctx, next);
+    await controller.execute('adminDashboard');
+})
+
+
 
 
 module.exports = r;

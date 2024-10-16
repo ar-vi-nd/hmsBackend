@@ -12,9 +12,9 @@ class Hotel extends BaseClass {
     constructor(ctx, next) {
         super(ctx,next)
         this._beforeMethods = {
+
             addHotel : ['authMiddleware','isAdmin'],
             removeHotel : ['authMiddleware','isAdmin'],
-            getHotelsAll : [],
             getHotel: [],
             updateHotel : ['authMiddleware','isAdmin']
         }
@@ -22,57 +22,112 @@ class Hotel extends BaseClass {
     }
 
 
-    async getHotelsAll() {
-        const { city, zipcode, page = 1, limit = 10, sort } = this.ctx.query; // Extract query parameters
+    // async getHotelsAll() {
+    //     const { city, page = 1, limit = 10, sort } = this.ctx.query; // Extract query parameters
     
-        // Build query object based on provided parameters
-        let query = {};   
+    //     // Build query object based on provided parameters
+    //     let query = {};   
         
-        // Use a case-insensitive regular expression for city substring match
+    //     // Use a case-insensitive regular expression for city substring match
+    //     if (city && city !== "undefined") {
+    //         query['address.city'] = { $regex: city, $options: 'i' }; // 'i' makes it case-insensitive
+    //     }
+    
+    //     // Initialize the sort object
+    //     let sortQuery = {};
+    
+    //     // Determine the sorting logic based on the 'sort' parameter
+    //     if (sort === 'asc') {
+    //         sortQuery['name'] = 1;  // Sort by hotel name in ascending order (case-insensitive)
+    //     } else if (sort === 'desc') {
+    //         sortQuery['name'] = -1; // Sort by hotel name in descending order (case-insensitive)
+    //     } else if (sort === '1') {
+    //         sortQuery['created'] = 1;  // Sort by creation date in ascending order
+    //     } else if (sort === '-1') {
+    //         sortQuery['created'] = -1; // Sort by creation date in descending order
+    //     } else if (sort === '2') {
+    //         sortQuery['minPrice'] = -1; // Sort by
+    //     } else if (sort === '-2') {
+    //         sortQuery['minPrice'] = 1; // Sort by
+    //     }
+    
+    //     // Fetch hotels with case-insensitive sorting for 'name' field
+    //     const hotels = await this.models.Hotel.find(query)
+    //         .collation({ locale: 'en', strength: 2 })  // Case-insensitive collation for sorting
+    //         .sort(sortQuery)  
+    //         .skip((page - 1) * limit)
+    //         .limit(limit ? parseInt(limit) : 10);
+    
+    //     const totalHotels = await this.models.Hotel.countDocuments(query);
+    
+    //     // Send response
+    //     this.ctx.body = {
+    //         success: true,
+    //         message: "Hotels fetched successfully",
+    //         data: {
+    //             hotels,
+    //             totalHotels,
+    //         },
+    //     };
+    // }
+
+    async getHotelsAll() {
+        const { city, page = 1, limit = 10, sort } = this.ctx.query; // Extract query parameters
+      
+        // Build query object based on provided parameters
+        let query = {};
+      
         if (city && city !== "undefined") {
-            query['address.city'] = { $regex: city, $options: 'i' }; // 'i' makes it case-insensitive
+          // Split the search term into words (e.g., "wanderer delhi" or "delhi wanderer")
+          const searchTerms = city.split(" ").filter(Boolean);
+      
+          // Create an array of $or conditions to search for each term in both the hotel name and city
+          query['$or'] = searchTerms.map(term => ({
+            $or: [
+              { 'name': { $regex: term, $options: 'i' } },        // Match each term in the hotel name (case-insensitive)
+              { 'address.city': { $regex: term, $options: 'i' } } // Match each term in the city name (case-insensitive)
+            ]
+          }));
         }
-    
-        if (zipcode) {
-            query['address.zipcode'] = zipcode; // Filter by zipcode if provided
-        }
-    
+      
         // Initialize the sort object
         let sortQuery = {};
-    
+      
         // Determine the sorting logic based on the 'sort' parameter
         if (sort === 'asc') {
-            sortQuery['name'] = 1;  // Sort by hotel name in ascending order (case-insensitive)
+          sortQuery['name'] = 1;  // Sort by hotel name in ascending order
         } else if (sort === 'desc') {
-            sortQuery['name'] = -1; // Sort by hotel name in descending order (case-insensitive)
+          sortQuery['name'] = -1; // Sort by hotel name in descending order
         } else if (sort === '1') {
-            sortQuery['created'] = 1;  // Sort by creation date in ascending order
+          sortQuery['created'] = 1;  // Sort by creation date in ascending order
         } else if (sort === '-1') {
-            sortQuery['created'] = -1; // Sort by creation date in descending order
+          sortQuery['created'] = -1; // Sort by creation date in descending order
+        } else if (sort === '2') {
+          sortQuery['minPrice'] = -1; // Sort by minimum price in descending order
+        } else if (sort === '-2') {
+          sortQuery['minPrice'] = 1;  // Sort by minimum price in ascending order
         }
-    
+      
         // Fetch hotels with case-insensitive sorting for 'name' field
         const hotels = await this.models.Hotel.find(query)
-            .collation({ locale: 'en', strength: 2 })  // Case-insensitive collation for sorting
-            .sort(sortQuery)  
-            .skip((page - 1) * limit)
-            .limit(limit ? parseInt(limit) : 10);
-    
+          .collation({ locale: 'en', strength: 2 })  // Case-insensitive collation for sorting
+          .sort(sortQuery)
+          .skip((page - 1) * limit)
+          .limit(limit ? parseInt(limit) : 10);
+      
         const totalHotels = await this.models.Hotel.countDocuments(query);
-    
+      
         // Send response
         this.ctx.body = {
-            success: true,
-            message: "Hotels fetched successfully",
-            data: {
-                hotels,
-                totalHotels,
-            },
+          success: true,
+          message: "Hotels fetched successfully",
+          data: {
+            hotels,
+            totalHotels,
+          },
         };
-    }
-    
-    
-    
+      }
+      
     async getHotelDetails(){
         // get hotel logic here
 
@@ -161,6 +216,8 @@ class Hotel extends BaseClass {
       
         const {name,owner,address,contact,roomCounts} = value
 
+        const minPrice = roomCounts?.single?.price || roomCounts?.premium?.price || roomCounts?.deluxe?.price
+
 
         // Upload pictures to cloudinary 
 
@@ -185,7 +242,7 @@ class Hotel extends BaseClass {
 
         try{
 
-        const addedHotel = await this.models.Hotel.create({name,owner,address,contact,roomCounts,pictures:pictureurls})
+        const addedHotel = await this.models.Hotel.create({name,owner,address,contact,roomCounts,pictures:pictureurls,minPrice:minPrice})
         let nextRoomNumber = 1;
 
         for (let i = 0; i < roomCounts.single.count; i++) {
@@ -246,6 +303,24 @@ class Hotel extends BaseClass {
     }
     }
 
+    // async updateHotel(){
+    //     try {
+
+    //         const data = this.ctx.body
+    //         console.log(data)
+
+    //         this.ctx.body = {
+    //             success: true,
+    //             message: "Hotel updated successfully",
+    //             data: {
+    //             }
+    //         }
+            
+    //     } catch (error) {
+            
+    //     }
+    // }
+
     async removeHotel() {
         console.log(this.ctx.request?.params);
     
@@ -282,11 +357,12 @@ class Hotel extends BaseClass {
     }
 
     async updateHotel(){
-        // update hotel logic here
         
+        
+        const {hotelId} = this.ctx.request.params
 
-        const hotelId = this.ctx.request.params?.id
-        console.log(hotelId)
+        const { name, owner, address, contact, roomCounts } = this.ctx.request.body;
+
 
         if(!mongoose.Types.ObjectId.isValid(hotelId)){
             this.throwError("201", "Invalid hotel ID")
@@ -297,26 +373,84 @@ class Hotel extends BaseClass {
         if(!hotelDetails){
             this.throwError("404", "Hotel not found")
         }
-
-        const {value,error} = Validation.Hotel.HotelRegisterSchema.validate(this.ctx.request.body)
-        if (error) {
-            let errorMessage = _.size(error.details) > 0? error.details[0].message : null;
-            this.throwError("201", errorMessage);
+   
+        const newRoomCounts = {
+            single:{
+                count: hotelDetails.roomCounts.single.count + roomCounts?.single?.count,
+                price: roomCounts.single?.price
+            },
+            premium:{
+                count: hotelDetails.roomCounts.premium.count + roomCounts?.premium?.count,
+                price: roomCounts.premium?.price
+            },
+            deluxe:{
+                count: hotelDetails.roomCounts.deluxe.count + roomCounts?.deluxe?.count,
+                price: roomCounts.deluxe?.price
+            }
+            
         }
-        const newHotelDetails = await this.models.Hotel.findByIdAndUpdate(hotelId,{$set:value},{new:true})
-
-        console.log(newHotelDetails)
 
 
+    // Update hotel details
+    try {
+        const updatedHotel = await this.models.Hotel.updateOne(
+            { _id: hotelId },
+            { $set: { name, owner, address, contact, roomCounts: newRoomCounts } },
+            {new: true}
+        );
 
+        // Fetch the last room number for the hotel
+        let lastRoom = await this.models.Room.find({ hotelId })
+            .sort({ roomNumber: -1 })
+            .limit(1);
+        let nextRoomNumber = lastRoom.length > 0 ? lastRoom[0].roomNumber + 1 : 1;
+
+        // Create new rooms if needed
+        if (roomCounts.single && roomCounts.single.count > 0) {
+            for (let i = 0; i < roomCounts.single.count; i++) {
+                await this.models.Room.create({
+                    hotelId: hotelId,
+                    roomNumber: nextRoomNumber++,
+                    type: "single",
+                    price: roomCounts.single.price,
+                    isBooked: false,
+                });
+            }
+        }
+
+        if (roomCounts.premium && roomCounts.premium.count > 0) {
+            for (let i = 0; i < roomCounts.premium.count; i++) {
+                await this.models.Room.create({
+                    hotelId: hotelId,
+                    roomNumber: nextRoomNumber++,
+                    type: "premium",
+                    price: roomCounts.premium.price,
+                    isBooked: false,
+                });
+            }
+        }
+
+        if (roomCounts.deluxe && roomCounts.deluxe.count > 0) {
+            for (let i = 0; i < roomCounts.deluxe.count; i++) {
+                await this.models.Room.create({
+                    hotelId: hotelId,
+                    roomNumber: nextRoomNumber++,
+                    type: "deluxe",
+                    price: roomCounts.deluxe.price,
+                    isBooked: false,
+                });
+            }
+        }
 
         this.ctx.body = {
             success: true,
             message: "Hotel updated successfully",
-            data: {
-               newHotelDetails
-            }
-        }
+            data: { updatedHotel },
+        };
+    } catch (error) {
+        console.log(error);
+        this.throwError('500', 'Error updating hotel details');
+    }
     }
 
     

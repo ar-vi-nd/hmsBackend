@@ -54,6 +54,7 @@ let schema = new Schema(
       premium: { price: { type: Number }, count: { type: Number, default: 0 } }, // Count of double rooms
       deluxe: { price: { type: Number }, count: { type: Number, default: 0 } }, // Count of deluxe rooms
     },
+    minPrice:{ type: Number, required: true}
   },
   {
     collection: "hotels",

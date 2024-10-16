@@ -54,10 +54,6 @@ const RoomBookingSchema = new Schema({
     checkOutDate: {
         type: Date,
         required: true
-    },
-    totalCost: {
-        type: Number,
-        required: true
     }
 });
 
@@ -74,7 +70,16 @@ const schema = new Schema({
     status: {
         type: String,
         required: true,
-        enum: ['CHECKED_IN', 'CHECKED_OUT', 'CANCELLED']
+        enum: ['BOOKED','CHECKED_IN', 'CHECKED_OUT', 'CANCELLED']
+    },
+    hotelId:{
+        type: Schema.Types.ObjectId,
+        required: true,
+        ref: 'Hotel'
+    },
+    totalCost: {
+        type: Number,
+        required: true
     }
 }, {
     collection: 'bookings',
